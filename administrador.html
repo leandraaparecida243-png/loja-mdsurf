@@ -21,11 +21,14 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
+        html { width: 100%; height: 100%; }
+
         body {
             background: var(--dark);
             color: #e8eaf0;
             font-family: 'Barlow', sans-serif;
             min-height: 100vh;
+            width: 100%;
         }
 
         body::before {
@@ -73,15 +76,19 @@
 
         /* MODAL SENHA */
         #modal-senha {
-            position: fixed; inset: 0;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            width: 100vw; height: 100vh;
+            background-color: #060a12;
             background-image:
                 linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)),
                 url('https://images.unsplash.com/photo-1471922694854-ff1b63b20054?w=1200');
             background-size: cover;
             background-position: center;
+            background-repeat: no-repeat;
             display: flex; align-items: center; justify-content: center;
             z-index: 9998;
             backdrop-filter: blur(1px);
+            overflow-y: auto;
         }
         #modal-senha.hidden { display: none; }
 
@@ -259,11 +266,31 @@
         .admin-form select option { background: #0d1117; }
         .admin-form .full { grid-column: 1 / -1; }
 
-        /* tamanhos */
-        .tamanhos-grid { display: flex; gap: 6px; flex-wrap: wrap; grid-column: 1 / -1; margin-top: 2px; }
-        .tamanho-check { display: none; }
-        .tamanho-label { padding: 5px 10px; border: 1.5px solid rgba(255,255,255,.08); border-radius: 5px; color: var(--text-muted); font-size: .72rem; font-weight: 700; cursor: pointer; transition: all .2s; user-select: none; }
-        .tamanho-check:checked + .tamanho-label { background: var(--lime); color: #000; border-color: var(--lime); }
+        /* tamanhos + estoque */
+        .tamanhos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 7px; grid-column: 1 / -1; margin-top: 2px; }
+        .tamanho-qtd-box { border: 1.5px solid rgba(255,255,255,.08); border-radius: 7px; padding: 6px 7px; background: #0a0d11; }
+        .tamanho-qtd-box label { display: block; font-size: .64rem; font-weight: 800; letter-spacing: .04em; color: var(--text-mid); margin-bottom: 4px; text-align: center; }
+        .tamanho-qtd-box input { width: 100%; background: #0d1117; border: 1px solid rgba(255,255,255,.08); color: #fff; padding: 4px 2px; border-radius: 5px; font-size: .78rem; text-align: center; font-family: 'Barlow', sans-serif; outline: none; }
+        .tamanho-qtd-box input:focus { border-color: var(--lime); }
+        .tamanho-qtd-box.tem-qtd { border-color: var(--lime); background: rgba(200,255,0,.05); }
+
+        /* painel resumo (dashboard) */
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; grid-column: 1/-1; }
+        .dash-card { background: #0a0d11; border: 1px solid rgba(255,255,255,.07); border-radius: 10px; padding: 10px 12px; }
+        .dash-card .dash-label { font-size: .58rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+        .dash-card .dash-value { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: .03em; color: #fff; }
+        .dash-card.dash-alerta .dash-value { color: #ffc107; }
+        .dash-card.dash-erro .dash-value { color: #ff6b6b; }
+        .dash-card.dash-ok .dash-value { color: var(--lime); }
+
+        /* botões editar */
+        .btn-edit { background: rgba(0,212,255,.1); color: var(--accent); border: 1px solid rgba(0,212,255,.25); padding: 4px 9px; border-radius: 5px; cursor: pointer; font-size: .68rem; font-weight: 700; font-family: 'Barlow', sans-serif; letter-spacing: .05em; text-transform: uppercase; transition: all .2s; margin-right: 6px; }
+        .btn-edit:hover { background: var(--accent); color: #000; }
+        .produto-admin-info .estoque-info { display: block; margin-top: 2px; font-size: .66rem; color: var(--text-mid); }
+        .produto-admin-info .estoque-info b.baixo { color: #ffc107; }
+        .produto-admin-info .estoque-info b.zero { color: #ff6b6b; }
+        .btn-cancelar-edicao { grid-column: 1/-1; background: rgba(255,107,53,.08); color: var(--accent2); border: 1.5px solid rgba(255,107,53,.2); padding: .6rem; border-radius: 8px; cursor: pointer; font-family: 'Barlow', sans-serif; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; display: none; }
+        .btn-cancelar-edicao.ativo { display: block; }
 
         /* foto tabs */
         .foto-tabs { display: flex; gap: 6px; margin-bottom: 8px; grid-column: 1 / -1; }
@@ -500,7 +527,9 @@
         <div class="admin-badge">⚙️ PAINEL</div>
     </div>
     <div id="admin-panel">
-        <div class="admin-title">📦 ADICIONAR NOVO PRODUTO</div>
+        <div class="admin-title">📊 RESUMO DA LOJA</div>
+        <div class="dashboard-grid" id="dashboard-grid"></div>
+        <div class="admin-title" id="form-title">📦 ADICIONAR NOVO PRODUTO</div>
         <button class="btn-alterar-senha" onclick="abrirModalAlterar()">🔑 ALTERAR SENHA DO ADMIN</button>
         <div class="admin-form">
             <input type="text" id="a-nome" placeholder="Nome do produto" />
@@ -522,15 +551,15 @@
             </select>
             <input type="text" id="a-desc" placeholder="Descrição breve" class="full" />
             <div style="grid-column:1/-1">
-                <div style="font-size:.62rem;color:var(--text-muted);font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px;">Tamanhos Disponíveis</div>
-                <div class="tamanhos-grid">
-                    <input type="checkbox" class="tamanho-check" id="tam-pp" value="PP"><label class="tamanho-label" for="tam-pp">PP</label>
-                    <input type="checkbox" class="tamanho-check" id="tam-p" value="P"><label class="tamanho-label" for="tam-p">P</label>
-                    <input type="checkbox" class="tamanho-check" id="tam-m" value="M"><label class="tamanho-label" for="tam-m">M</label>
-                    <input type="checkbox" class="tamanho-check" id="tam-g" value="G"><label class="tamanho-label" for="tam-g">G</label>
-                    <input type="checkbox" class="tamanho-check" id="tam-gg" value="GG"><label class="tamanho-label" for="tam-gg">GG</label>
-                    <input type="checkbox" class="tamanho-check" id="tam-xgg" value="XGG"><label class="tamanho-label" for="tam-xgg">XGG</label>
-                    <input type="checkbox" class="tamanho-check" id="tam-un" value="ÚNICO"><label class="tamanho-label" for="tam-un">ÚNICO</label>
+                <div style="font-size:.62rem;color:var(--text-muted);font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px;">Estoque por Tamanho (deixe 0 para não oferecer)</div>
+                <div class="tamanhos-grid" id="tamanhos-grid">
+                    <div class="tamanho-qtd-box"><label for="tam-pp">PP</label><input type="number" min="0" class="tamanho-qtd" id="tam-pp" data-tam="PP" value="" placeholder="0" oninput="marcarQtdBox(this)"></div>
+                    <div class="tamanho-qtd-box"><label for="tam-p">P</label><input type="number" min="0" class="tamanho-qtd" id="tam-p" data-tam="P" value="" placeholder="0" oninput="marcarQtdBox(this)"></div>
+                    <div class="tamanho-qtd-box"><label for="tam-m">M</label><input type="number" min="0" class="tamanho-qtd" id="tam-m" data-tam="M" value="" placeholder="0" oninput="marcarQtdBox(this)"></div>
+                    <div class="tamanho-qtd-box"><label for="tam-g">G</label><input type="number" min="0" class="tamanho-qtd" id="tam-g" data-tam="G" value="" placeholder="0" oninput="marcarQtdBox(this)"></div>
+                    <div class="tamanho-qtd-box"><label for="tam-gg">GG</label><input type="number" min="0" class="tamanho-qtd" id="tam-gg" data-tam="GG" value="" placeholder="0" oninput="marcarQtdBox(this)"></div>
+                    <div class="tamanho-qtd-box"><label for="tam-xgg">XGG</label><input type="number" min="0" class="tamanho-qtd" id="tam-xgg" data-tam="XGG" value="" placeholder="0" oninput="marcarQtdBox(this)"></div>
+                    <div class="tamanho-qtd-box"><label for="tam-un">ÚNICO</label><input type="number" min="0" class="tamanho-qtd" id="tam-un" data-tam="ÚNICO" value="" placeholder="0" oninput="marcarQtdBox(this)"></div>
                 </div>
             </div>
             <div class="foto-tabs full">
@@ -553,7 +582,8 @@
                 <input type="text" id="a-foto-url" placeholder="Cole o link da imagem aqui (https://...)" oninput="previewUrl()" />
                 <img id="preview-url" class="preview-img" style="margin-top:8px;" />
             </div>
-            <button class="btn-add-produto" onclick="adicionarProduto()">+ ADICIONAR PRODUTO À LOJA</button>
+            <button class="btn-add-produto" id="btn-add-produto" onclick="adicionarProduto()">+ ADICIONAR PRODUTO À LOJA</button>
+            <button class="btn-cancelar-edicao" id="btn-cancelar-edicao" onclick="cancelarEdicao()">✕ CANCELAR EDIÇÃO</button>
         </div>
         <button class="btn-limpar-tudo" onclick="limparTodosProdutos()">🗑 LIMPAR TODOS OS PRODUTOS</button>
         <a id="btn-ir-loja" href="index.html" class="btn-ir-loja">🛍 IR PARA A LOJA</a>
@@ -586,6 +616,24 @@
     let produtos = [];
     let fotoAtual = "";    // base64 temporário antes do upload
     let fotoUrlFinal = ""; // URL definitiva do ImgBB após upload
+    let editandoId = null; // id do produto em edição (null = modo "adicionar novo")
+
+    // ── MARCAR VISUAL DO CAMPO DE QUANTIDADE ──
+    function marcarQtdBox(input) {
+        const box = input.closest('.tamanho-qtd-box');
+        const val = parseInt(input.value) || 0;
+        box.classList.toggle('tem-qtd', val > 0);
+    }
+
+    // ── LER ESTOQUE DO FORMULÁRIO ──
+    function lerEstoqueDoForm() {
+        const estoque = {};
+        document.querySelectorAll('.tamanho-qtd').forEach(inp => {
+            const v = parseInt(inp.value);
+            if (!isNaN(v) && v > 0) estoque[inp.dataset.tam] = v;
+        });
+        return estoque;
+    }
 
     // ── LOADING ──
     function toggleLoading(show, texto = 'PROCESSANDO...') {
@@ -746,6 +794,7 @@
             showToast('⚠️ Erro ao conectar com JSONBin!');
         }
         toggleLoading(false);
+        calcularDashboard();
         atualizarListaAdmin();
     }
 
@@ -776,21 +825,21 @@
         return data.data.url; // URL direta da imagem
     }
 
-    // ── ADICIONAR PRODUTO ──
+    // ── ADICIONAR / SALVAR EDIÇÃO DE PRODUTO ──
     async function adicionarProduto() {
         const nome     = document.getElementById('a-nome').value.trim();
         const preco    = parseFloat(document.getElementById('a-preco').value);
         const cat      = document.getElementById('a-categoria').value;
         const desc     = document.getElementById('a-desc').value.trim();
-        const tamanhos = [...document.querySelectorAll('.tamanho-check:checked')].map(c => c.value);
+        const estoque  = lerEstoqueDoForm();
+        const tamanhos = Object.keys(estoque);
 
         if (!nome || isNaN(preco) || !cat) {
             showToast('⚠️ Preencha nome, preço e categoria!');
             return;
         }
 
-        toggleLoading(true, 'SALVANDO...');
-        const novoId = Date.now();
+        toggleLoading(true, editandoId ? 'SALVANDO EDIÇÃO...' : 'SALVANDO...');
         let fotoUrl = fotoAtual;
 
         // Se for base64, faz upload no ImgBB
@@ -806,26 +855,35 @@
             }
         }
 
-        const novoProduto = {
-            id: novoId,
+        const dadosProduto = {
+            id: editandoId || Date.now(),
             nome,
             preco,
             categoria: cat,
             descricao: desc || cat,
             foto: fotoUrl,
-            tamanhos
+            tamanhos,
+            estoque
         };
 
         try {
-            // Recarrega lista atual antes de adicionar
+            // Recarrega lista atual antes de salvar
             const rP = await fetch(API_URL + '/latest', { headers: { 'X-Master-Key': API_KEY } });
             const dP = await rP.json();
             let listaAtual = Array.isArray(dP.record) ? dP.record : [];
             listaAtual = listaAtual.filter(p => p.nome && p.nome !== '');
-            listaAtual.push(novoProduto);
+
+            if (editandoId) {
+                const idx = listaAtual.findIndex(p => p.id == editandoId);
+                if (idx >= 0) listaAtual[idx] = dadosProduto;
+                else listaAtual.push(dadosProduto);
+            } else {
+                listaAtual.push(dadosProduto);
+            }
+
             await salvarProdutosNoBin(listaAtual);
             produtos = listaAtual;
-            showToast('✅ Produto salvo na loja!');
+            showToast(editandoId ? '✅ Produto atualizado!' : '✅ Produto salvo na loja!');
         } catch(e) {
             console.error('Erro ao salvar produto:', e);
             showToast('❌ Erro ao salvar produto!');
@@ -833,7 +891,14 @@
             return;
         }
 
-        // Limpar campos
+        limparFormulario();
+        toggleLoading(false);
+        calcularDashboard();
+        atualizarListaAdmin();
+    }
+
+    // ── LIMPAR FORMULÁRIO (volta ao modo "adicionar") ──
+    function limparFormulario() {
         document.getElementById('a-nome').value = '';
         document.getElementById('a-preco').value = '';
         document.getElementById('a-categoria').value = '';
@@ -842,10 +907,55 @@
         document.getElementById('preview-upload').style.display = 'none';
         document.getElementById('preview-url').style.display = 'none';
         document.getElementById('drop-zone').querySelector('p').textContent = 'Clique ou arraste a foto aqui';
-        document.querySelectorAll('.tamanho-check').forEach(c => c.checked = false);
+        document.querySelectorAll('.tamanho-qtd').forEach(c => { c.value = ''; marcarQtdBox(c); });
         fotoAtual = "";
-        toggleLoading(false);
-        atualizarListaAdmin();
+        editandoId = null;
+        document.getElementById('form-title').textContent = '📦 ADICIONAR NOVO PRODUTO';
+        document.getElementById('btn-add-produto').textContent = '+ ADICIONAR PRODUTO À LOJA';
+        document.getElementById('btn-cancelar-edicao').classList.remove('ativo');
+    }
+
+    // ── CANCELAR EDIÇÃO ──
+    function cancelarEdicao() {
+        limparFormulario();
+        showToast('Edição cancelada.');
+    }
+
+    // ── EDITAR PRODUTO (carrega dados no formulário) ──
+    function editarProdutoAdmin(id) {
+        const p = produtos.find(x => x.id == id);
+        if (!p) return;
+        editandoId = p.id;
+
+        document.getElementById('a-nome').value = p.nome || '';
+        document.getElementById('a-preco').value = p.preco || '';
+        document.getElementById('a-categoria').value = p.categoria || '';
+        document.getElementById('a-desc').value = p.descricao || '';
+
+        // Preencher estoque por tamanho
+        const estoque = p.estoque || {};
+        document.querySelectorAll('.tamanho-qtd').forEach(inp => {
+            const v = estoque[inp.dataset.tam];
+            inp.value = (v !== undefined) ? v : '';
+            marcarQtdBox(inp);
+        });
+
+        // Preencher foto (troca a aba primeiro, pois trocarFotoTab zera fotoAtual)
+        const fotoProduto = p.foto || '';
+        if (fotoProduto) {
+            trocarFotoTab(document.querySelectorAll('.foto-tab')[1], 'tab-url');
+            document.getElementById('a-foto-url').value = fotoProduto;
+            fotoAtual = fotoProduto;
+            const prev = document.getElementById('preview-url');
+            prev.src = fotoProduto; prev.style.display = 'block';
+        }
+
+        document.getElementById('form-title').textContent = '✏️ EDITANDO: ' + p.nome;
+        document.getElementById('btn-add-produto').textContent = '💾 SALVAR ALTERAÇÕES';
+        document.getElementById('btn-cancelar-edicao').classList.add('ativo');
+
+        document.getElementById('admin-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        showToast('✏️ Editando produto — altere os campos e salve.');
     }
 
     // ── REMOVER PRODUTO ──
@@ -856,11 +966,13 @@
             const novaLista = produtos.filter(p => p.id != id);
             await salvarProdutosNoBin(novaLista);
             produtos = novaLista;
+            if (editandoId == id) limparFormulario();
             showToast('🗑 Produto removido!');
         } catch(e) {
             showToast('❌ Erro ao remover produto!');
         }
         toggleLoading(false);
+        calcularDashboard();
         atualizarListaAdmin();
     }
 
@@ -871,17 +983,77 @@
         try {
             await salvarProdutosNoBin([]);
             produtos = [];
+            limparFormulario();
             showToast('🗑 Todos os produtos removidos!');
         } catch(e) {
             showToast('❌ Erro ao limpar produtos!');
         }
         toggleLoading(false);
+        calcularDashboard();
         atualizarListaAdmin();
+    }
+
+    // ── CALCULAR PAINEL RESUMO (DASHBOARD) ──
+    function calcularDashboard() {
+        const el = document.getElementById('dashboard-grid');
+        if (!el) return;
+
+        const totalProdutos = produtos.length;
+        let totalPecas = 0, valorTotal = 0, estoqueBaixo = 0, esgotados = 0, semControle = 0;
+
+        produtos.forEach(p => {
+            const temEstoque = p.estoque && Object.keys(p.estoque).length > 0;
+            if (!temEstoque) { semControle++; return; }
+            const soma = Object.values(p.estoque).reduce((a, b) => a + (Number(b) || 0), 0);
+            totalPecas += soma;
+            valorTotal += soma * (parseFloat(p.preco) || 0);
+            if (soma === 0) esgotados++;
+            else if (soma <= 3) estoqueBaixo++;
+        });
+
+        const valorFmt = valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        el.innerHTML = `
+            <div class="dash-card">
+                <div class="dash-label">📦 Produtos Cadastrados</div>
+                <div class="dash-value">${totalProdutos}</div>
+            </div>
+            <div class="dash-card">
+                <div class="dash-label">👕 Peças em Estoque</div>
+                <div class="dash-value">${totalPecas}</div>
+            </div>
+            <div class="dash-card">
+                <div class="dash-label">💰 Valor em Estoque</div>
+                <div class="dash-value" style="font-size:1.15rem;">R$ ${valorFmt}</div>
+            </div>
+            <div class="dash-card ${estoqueBaixo > 0 ? 'dash-alerta' : ''}">
+                <div class="dash-label">⚠️ Estoque Baixo</div>
+                <div class="dash-value">${estoqueBaixo}</div>
+            </div>
+            <div class="dash-card ${esgotados > 0 ? 'dash-erro' : ''}" style="grid-column:1/-1">
+                <div class="dash-label">❌ Produtos Esgotados</div>
+                <div class="dash-value">${esgotados}</div>
+            </div>
+            ${semControle > 0 ? `<div style="grid-column:1/-1;font-size:.68rem;color:var(--text-muted);padding:2px 2px 0;">ℹ️ ${semControle} produto(s) ainda sem estoque cadastrado — edite-os para incluir as quantidades.</div>` : ''}
+        `;
     }
 
     // ── RESOLVER URL DA FOTO ──
     function getFotoUrl(p) {
         return p.foto || '';
+    }
+
+    // ── MONTAR TEXTO DO ESTOQUE PARA A LISTA ──
+    function montarEstoqueTexto(p) {
+        if (!p.estoque || Object.keys(p.estoque).length === 0) {
+            return '<span class="estoque-info">Sem estoque cadastrado</span>';
+        }
+        const partes = Object.entries(p.estoque).map(([tam, qtd]) => {
+            const n = Number(qtd) || 0;
+            const classe = n === 0 ? 'zero' : (n <= 3 ? 'baixo' : '');
+            return `${tam}: <b class="${classe}">${n}</b>`;
+        });
+        return `<span class="estoque-info">${partes.join(' · ')}</span>`;
     }
 
     // ── ATUALIZAR LISTA ADMIN ──
@@ -903,9 +1075,13 @@
                     <div class="no-img" ${urlFoto ? 'style="display:none"' : ''}>👕</div>
                     <div class="produto-admin-info">
                         <strong>${p.nome}</strong>
-                        <span>R$ ${parseFloat(p.preco).toFixed(2)} · ${p.categoria}${p.tamanhos && p.tamanhos.length ? ' · ' + (Array.isArray(p.tamanhos) ? p.tamanhos.join(', ') : p.tamanhos) : ''}</span>
+                        <span>R$ ${parseFloat(p.preco).toFixed(2)} · ${p.categoria}</span>
+                        ${montarEstoqueTexto(p)}
                     </div>
-                    <button class="btn-del" onclick="removerProdutoAdmin(${p.id})">REMOVER</button>
+                    <div style="display:flex;flex-direction:column;gap:5px;">
+                        <button class="btn-edit" onclick="editarProdutoAdmin(${p.id})">EDITAR</button>
+                        <button class="btn-del" onclick="removerProdutoAdmin(${p.id})">REMOVER</button>
+                    </div>
                 </div>`;
             }).join('');
     }
